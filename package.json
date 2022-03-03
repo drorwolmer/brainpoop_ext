@@ -7,7 +7,8 @@
     "watch": "nodemon --watch 'src/*' -e ts,tsx --exec yarn compile",
     "compile-popup": "esbuild src/main.tsx --bundle --outfile=dist/main.js --loader:.html=text",
     "compile-background": "esbuild src/background.ts --bundle --outfile=dist/background.js",
-    "compile": "yarn compile-popup && yarn compile-background"
+    "compile-content": "esbuild src/content.ts --bundle --outfile=dist/content.js",
+    "compile": "yarn compile-popup && yarn compile-background && yarn compile-content"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.179",

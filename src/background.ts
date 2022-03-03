@@ -13,6 +13,8 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendRes) => {
       data: {
         active: IS_ACTIVE,
         procrastinatingSince: PROCRASTINATING_SINCE,
+        procrastinatingSinceSeconds:
+          PROCRASTINATING_SINCE && (Date.now() - PROCRASTINATING_SINCE) / 1000,
       },
     } as Message);
   }
@@ -135,13 +137,17 @@ const BAD_DOMAINS = new Set<string>();
     ["blocking"]
   );
 
-  // chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  //   if (changeInfo.url) {
-  //     const url = new URL(changeInfo.url);
-  //     const domain = url.host.replace(/^www\./, "");
-  //     if (BAD_DOMAINS.has(domain)) {
-  //       chrome.tabs.update(tabId, { url: "https://wfh.dj" });
-  //     }
-  //   }
-  // });
+  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    console.log(changeInfo);
+    if (changeInfo.url) {
+      console.log("WE GOT IT");
+      const url = new URL(changeInfo.url);
+      const domain = url.host.replace(/^www\./, "");
+      if (BAD_DOMAINS.has(domain)) {
+        chrome.tabs.executeScript(tabId, {
+          file: "dist/content.js",
+        });
+      }
+    }
+  });
 })();
