@@ -76,6 +76,34 @@ const getBadDomains = async (set: Set<string>) => {
     "facebook.com",
     "www.facebook.com",
   ].forEach((x) => set.add(x));
+
+  set.delete("linkedin.com");
+  set.delete("www.linkedin.com");
+};
+
+type BrainPoopElasticEvent = {
+  timestamp: number;
+  url: string;
+};
+
+const sendEventToEs = async (url: string) => {
+  const timestamp = Date.now();
+  const event = {
+    timestamp,
+    data: url,
+    isActive: IS_ACTIVE,
+    type: "CHROME_TAB",
+  };
+
+  const res = await fetch("https://es.wfh.dj/brainpoop2/_doc", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(event),
+  });
+
+  return res;
 };
 
 const BAD_DOMAINS = new Set<string>();
@@ -91,6 +119,10 @@ const BAD_DOMAINS = new Set<string>();
 
       const url = new URL(details.url);
       const domain = url.host.replace(/^www\./, "");
+      if (domain === "wallpaperaccess.com") {
+        return;
+      }
+      sendEventToEs(domain);
       if (BAD_DOMAINS.has(domain)) {
         if (IS_ACTIVE) {
           return {

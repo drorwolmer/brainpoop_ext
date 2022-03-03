@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "watch": "nodemon --watch 'src/*' -e ts -e tsx --exec yarn compile",
+    "watch": "nodemon --watch 'src/*' -e ts,tsx --exec yarn compile",
     "compile-popup": "esbuild src/main.tsx --bundle --outfile=dist/main.js --loader:.html=text",
     "compile-background": "esbuild src/background.ts --bundle --outfile=dist/background.js",
     "compile": "yarn compile-popup && yarn compile-background"
