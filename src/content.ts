@@ -19,7 +19,8 @@ color:black;
 containerDiv.innerHTML = "test";
 containerDiv.addEventListener("click", () => {
   chrome.runtime.sendMessage({ type: "TOGGLE_STATUS" }, () => {
-    window.location.reload();
+    //   Change window location
+    window.location.href = "https://wallpaperaccess.com/full/3821307.jpg";
   });
 });
 document.body.prepend(containerDiv);

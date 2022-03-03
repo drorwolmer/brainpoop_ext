@@ -32,6 +32,10 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendRes) => {
         procrastinatingSince: PROCRASTINATING_SINCE,
       },
     } as Message);
+    sendEventToEs({
+      isActive: IS_ACTIVE,
+      type: "TOGGLE_STATUS",
+    });
   }
 });
 
@@ -88,13 +92,11 @@ type BrainPoopElasticEvent = {
   url: string;
 };
 
-const sendEventToEs = async (url: string) => {
+const sendEventToEs = async (event: { [key: string]: any }) => {
   const timestamp = Date.now();
-  const event = {
+  const body = {
+    ...event,
     timestamp,
-    data: url,
-    isActive: IS_ACTIVE,
-    type: "CHROME_TAB",
   };
 
   const res = await fetch("https://es.wfh.dj/brainpoop2/_doc", {
@@ -102,7 +104,7 @@ const sendEventToEs = async (url: string) => {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(event),
+    body: JSON.stringify(body),
   });
 
   return res;
@@ -124,7 +126,11 @@ const BAD_DOMAINS = new Set<string>();
       if (domain === "wallpaperaccess.com") {
         return;
       }
-      sendEventToEs(domain);
+      sendEventToEs({
+        data: domain,
+        isActive: IS_ACTIVE,
+        type: "CHROME_TAB",
+      });
       if (BAD_DOMAINS.has(domain)) {
         if (IS_ACTIVE) {
           return {
