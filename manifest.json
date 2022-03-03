@@ -1,0 +1,24 @@
+{
+  "name": "Brainpoop",
+  "description": "Stop procrastinating you fucking idiot",
+  "version": "1.0",
+  "manifest_version": 2,
+  "background": {
+    "scripts": ["dist/background.js"]
+  },
+  "permissions": [
+    "contextMenus",
+    "privacy",
+    "storage",
+    "tabs",
+    "unlimitedStorage",
+    "webNavigation",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
+  ],
+  "content_security_policy": "script-src 'self'; object-src 'self'",
+  "browser_action": {
+    "default_popup": "popup.html"
+  }
+}
