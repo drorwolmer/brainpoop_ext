@@ -5,8 +5,11 @@ export type Message = {
 
 let IS_ACTIVE = true;
 let PROCRASTINATING_SINCE: number | undefined = undefined;
+const DOMAINS_PROCRASTINATION = new Set<string>();
+const DOMAINS_FAKENEWS_GAMBLING_PORN = new Set<string>();
+
 chrome.runtime.onMessage.addListener((message: Message, sender, sendRes) => {
-  console.log({ message, sender });
+  console.debug({ message, sender });
   if (message.type === "GET_STATUS") {
     sendRes({
       type: "GET_STATUS",
@@ -39,35 +42,40 @@ chrome.runtime.onMessage.addListener((message: Message, sender, sendRes) => {
   }
 });
 
-const getBadDomains = async (set: Set<string>) => {
-  const [procrastinationRes, badUrlsRes] = await Promise.all([
-    fetch(
-      "https://raw.githubusercontent.com/bytescout/list-of-procrastination-websites/main/sites-all.txt"
-    ),
-    fetch(
-      "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn-social/hosts"
-    ),
-  ]);
+const getBadDomains = async () => {
+  const [procrastinationResponse, fakenewsGamblingPornHostsResponse] =
+    await Promise.all([
+      fetch(
+        "https://raw.githubusercontent.com/bytescout/list-of-procrastination-websites/main/sites-all.txt"
+      ),
+      fetch(
+        "https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn/hosts"
+      ),
+    ]);
 
   // Get all text
-  const [procrastinationResText, badUrlsResText] = await Promise.all([
-    procrastinationRes.text(),
-    badUrlsRes.text(),
-  ]);
+  const [procrastinationResponseText, fakenewsGamblingPornHostsResponseText] =
+    await Promise.all([
+      procrastinationResponse.text(),
+      fakenewsGamblingPornHostsResponse.text(),
+    ]);
 
-  const procrastinationUrls = procrastinationResText
+  const procrastinationHosts = procrastinationResponseText
     .split("\n")
     .filter((x) => x.length > 1)
     .map((x) => x.trim());
 
-  const badUrls = badUrlsResText
+  const fakenewsGamblingPornHosts = fakenewsGamblingPornHostsResponseText
     .split("\n")
     .filter((x) => x.startsWith("0.0.0.0 "))
     .filter((x) => x.split(" ").length > 1)
     .map((x) => x.split(" ")[1].trim());
 
-  procrastinationUrls.forEach((url) => set.add(url));
-  badUrls.forEach((url) => set.add(url));
+  procrastinationHosts.forEach((url) => DOMAINS_PROCRASTINATION.add(url));
+
+  fakenewsGamblingPornHosts.forEach((url) =>
+    DOMAINS_FAKENEWS_GAMBLING_PORN.add(url)
+  );
 
   [
     "www.youtube.com",
@@ -81,10 +89,10 @@ const getBadDomains = async (set: Set<string>) => {
     "news.ycombinator.com",
     "facebook.com",
     "www.facebook.com",
-  ].forEach((x) => set.add(x));
+  ].forEach((x) => DOMAINS_PROCRASTINATION.add(x));
 
-  set.delete("linkedin.com");
-  set.delete("www.linkedin.com");
+  DOMAINS_PROCRASTINATION.delete("linkedin.com");
+  DOMAINS_PROCRASTINATION.delete("www.linkedin.com");
 };
 
 type BrainPoopElasticEvent = {
@@ -110,9 +118,8 @@ const sendEventToEs = async (event: { [key: string]: any }) => {
   return res;
 };
 
-const BAD_DOMAINS = new Set<string>();
 (async () => {
-  await getBadDomains(BAD_DOMAINS);
+  await getBadDomains();
   console.log("[+] Loaded bad domains 2");
 
   chrome.webRequest.onBeforeRequest.addListener(
@@ -131,12 +138,15 @@ const BAD_DOMAINS = new Set<string>();
         isActive: IS_ACTIVE,
         type: "CHROME_TAB",
       });
-      if (BAD_DOMAINS.has(domain)) {
-        if (IS_ACTIVE) {
-          return {
-            redirectUrl: "https://wallpaperaccess.com/full/3821307.jpg",
-          };
-        }
+      if (DOMAINS_FAKENEWS_GAMBLING_PORN.has(domain)) {
+        return {
+          redirectUrl: "https://wikipedia.org",
+        };
+      }
+      if (DOMAINS_PROCRASTINATION.has(domain) && IS_ACTIVE) {
+        return {
+          redirectUrl: "https://wallpaperaccess.com/full/3821307.jpg",
+        };
       }
     },
     { urls: ["<all_urls>"], types: ["main_frame"] },
@@ -144,16 +154,27 @@ const BAD_DOMAINS = new Set<string>();
   );
 
   chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    console.log(changeInfo);
+    let url: string | undefined = undefined;
+    console.warn({ tabId, changeInfo, tab });
+    if (changeInfo.status === "loading") {
+      url = tab.url;
+    }
     if (changeInfo.url) {
-      console.log("WE GOT IT");
-      const url = new URL(changeInfo.url);
-      const domain = url.host.replace(/^www\./, "");
-      if (BAD_DOMAINS.has(domain)) {
-        chrome.tabs.executeScript(tabId, {
-          file: "dist/content.js",
-        });
-      }
+      url = changeInfo.url;
+    }
+
+    if (!url) {
+      return;
+    }
+
+    const domain = new URL(url).host.replace(/^www\./, "");
+    if (
+      DOMAINS_FAKENEWS_GAMBLING_PORN.has(domain) ||
+      DOMAINS_PROCRASTINATION.has(domain)
+    ) {
+      chrome.tabs.executeScript(tabId, {
+        file: "dist/content.js",
+      });
     }
   });
 })();

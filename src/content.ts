@@ -2,9 +2,9 @@ var containerDiv = document.createElement("div");
 containerDiv.style.cssText = `
 display:none;
 position:fixed;
-width:50px;
+width:100px;
 height:50px;
-background-color:red;
+background-color:green;
 left:10px;
 top:10px;
 z-index:9999;
@@ -16,7 +16,6 @@ justify-content:center;
 cursor:pointer;
 color:black;
 `;
-containerDiv.innerHTML = "test";
 containerDiv.addEventListener("click", () => {
   chrome.runtime.sendMessage({ type: "TOGGLE_STATUS" }, () => {
     //   Change window location
@@ -29,11 +28,27 @@ const fetchState = () => {
   chrome.runtime.sendMessage({ type: "GET_STATUS" }, function (response) {
     console.log(response);
     if (!response.data.active) {
-      containerDiv.style.display = "flex";
-      containerDiv.innerText = `${Math.floor(
-        response.data.procrastinatingSinceSeconds
-      )}`;
+      const procrastinatingSinceSeconds: number | undefined =
+        response.data.procrastinatingSinceSeconds;
+      if (procrastinatingSinceSeconds) {
+        const procrastinatingSinceMinutes = Math.floor(
+          procrastinatingSinceSeconds / 60
+        );
+
+        containerDiv.style.display = "flex";
+        containerDiv.style.backgroundColor = "red";
+
+        containerDiv.innerText = `${procrastinatingSinceMinutes} Minutes`;
+
+        containerDiv.style.width = `${
+          Math.floor(procrastinatingSinceSeconds) + 100
+        }px`;
+        containerDiv.style.height = `${
+          Math.floor(procrastinatingSinceSeconds) + 50
+        }px`;
+      }
     } else {
+      containerDiv.style.backgroundColor = "green";
       containerDiv.style.display = "none";
     }
   });
